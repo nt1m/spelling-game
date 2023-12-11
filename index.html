@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web spelling game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        [hidden] {
+            display: none !important;
+        }
+
+        svg {
+            fill: currentColor;
+        }
+
+        @keyframes shake {
+            from {
+                translate: 0;
+            }
+            25% {
+                translate: 4px;
+            }
+            50% {
+                translate: -4px;
+            }
+            70% {
+                translate: 4px;
+            }
+            to {
+                translate: 0;
+            }
+        }
+
+        body {
+            font-family: system-ui;
+            color-scheme: light;
+            accent-color: var(--accent-color);
+            --accent-color: var(--mint);
+            --mint: rgb(102,212,207);
+            --blue: #0a84ff;
+            --red: rgb(255,69,58);
+            transition: all 0.3s;
+
+            &.dark {
+                color-scheme: dark;
+            }
+        }
+
+        .screen {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            background-color: Canvas;
+            color: CanvasText;
+        }
+
+        h1 {
+            text-align: center;
+        }
+        
+        button {
+            &:where(:not(.icon-button)) {
+                background-color: color-mix(in lch, currentColor 12%, transparent);
+                color: inherit;
+                font: inherit;
+                border-radius: 8px;
+                border: none;
+                font-weight: 600;
+            }
+            &:hover {
+                background-color: color-mix(in lch, currentColor 20%, transparent);
+            }
+            &:hover:active {
+                background-color: color-mix(in lch, currentColor 28%, transparent);
+            }
+        }
+
+        .large-button {
+            font-size: 1.5em;
+            padding: .5em;
+        }
+
+        .primary-button {
+            background-color: var(--accent-color);
+            color: black;
+
+            &:hover {
+                background-color: color-mix(in lch, var(--accent-color) 95%, black);
+            }
+            &:hover:active {
+                background-color: color-mix(in lch, var(--accent-color) 92%, black);
+            }
+        }
+
+        .icon-button {
+            background: none;
+            border: none;
+            padding: 0;
+            border-radius: 100%;
+            width: 2.5em;
+            height: 2.5em;
+            margin: 0.25em;
+            align-content: center;
+
+            & > svg {
+                display: block;
+                width: 1em;
+                margin: auto;
+            }
+        }
+
+        @scope (#game-screen) {
+            :scope:not([hidden]) {
+                display: flex;
+                flex-direction: column;
+            }
+            @scope (.header) {
+                :scope {
+                    position: relative;
+                    width: 100%;
+                }
+
+                .icon-button {
+                    font-size: 1.5em;
+                    position: absolute;
+                    right: 0;
+                    top: 0.1em;
+                }
+            }
+
+            #middle {
+                margin: auto 40px;
+                & > :not(:last-child) {
+                    margin-bottom: 0.5em;
+                }
+            }
+
+            input {
+                font-variant-caps: all-small-caps;
+                appearance: none;
+                border: none;
+                border-bottom: 3px solid currentColor;
+                outline: none;
+                color: inherit;
+                background-color: transparent;
+                font-size: 40px;
+                font-family: inherit;
+                width: 100%;
+                box-sizing: border-box;
+                text-align: center;
+
+                &:focus-visible {
+                    border-bottom-color: var(--accent-color);
+                }
+
+                &::spelling-error {
+                    background-color: var(--red);
+                    color: white;
+                    text-decoration-color: transparent;
+                    text-decoration-line: underline;
+                }
+
+                &::grammar-error {
+                    background-color: var(--blue);
+                    color: white;
+                    text-decoration-color: transparent;
+                    text-decoration-line: underline;
+                }
+
+                &:has(~ #invalidResult:not([hidden])) {
+                    animation: shake 0.5s;
+                }
+            }
+
+            #invalidResult {
+                color: var(--red);
+                text-align: center;
+            }
+
+            #hintsLegend {
+                text-align: center;
+                > p {
+                    display: inline-block;
+                    margin-inline: 4em;
+                    margin-block: 0;
+                    text-align: start;
+                    > * {
+                        vertical-align: middle;
+                    }
+                }
+            }
+
+            #popperAnimation {
+                position: relative;
+                height: 0;
+                > img {
+                    position: absolute;
+                    width: 30vw;
+                    bottom: 0;
+                    left: 0;
+                }
+            }
+
+            .swatch {
+                display: inline-block;
+                width: 1em;
+                height: 1em;
+                border-radius: 100%;
+                margin-inline-end: 0.2em;
+            }
+
+            @scope (#keyboard) {
+                :scope {
+                    text-align: center;
+                    width: 100%;
+                    font-size: 1.25em;
+                }
+                button {
+                    border-radius: 4px;
+                    text-transform: uppercase;
+                    padding: 0.5em;
+                    min-width: 2.5ch;
+                    margin: 0.1em;
+                }
+                .row {
+                    margin: auto;
+                    width: 100%;
+                    &:last-child {
+                        display: flex;
+                    }
+                }
+
+                .space {
+                    flex-grow: 1;
+                }
+                .backspace {
+                    min-width: 4em;
+                }
+            }
+        }
+
+        @scope (#settings-screen) {
+            :scope {
+                padding-inline: 1em;
+            }
+            .row {
+                padding-block: 1em;
+                border-bottom: 1px solid color-mix(in lch, CanvasText 15%, transparent);
+            }
+            input, label {
+                vertical-align: middle;
+            }
+            button {
+                width: 100%;
+                margin-block: 1em;
+            }
+        }
+
+        @scope (#home-screen) {
+            :scope:not([hidden]) {
+                display: flex;
+                flex-direction: column;
+            }
+            h1 {
+                margin: auto;
+            }
+            svg {
+                width: min(50vw, 300px);
+                display: block;
+                margin: auto;
+            }
+            button {
+                width: 50%;
+                display: block;
+                margin: auto;
+            }
+        }
+        
+        @scope (#victory-screen) {
+            :scope {
+                display: flex;
+                flex-direction: column;
+                text-align: center;
+                align-items: center;
+                justify-content: center;
+            }
+            div {
+                margin-block: auto;
+            }
+            p {
+                font-size: 2em;
+                font-weight: 600;
+            }
+            .emoji {
+                font-size: 5em;
+                margin: 0;
+            }
+            button {
+                width: 50%;
+                display: block;
+                margin-bottom: 4em
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="home-screen" class="screen">
+        <h1>SPELL IT!</h1>
+        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.7132 14.2632">
+            <rect height="14.2632" opacity="0" width="19.7132" x="0" y="0"/>
+            <path d="M1.75195 12.7302L14.9736 12.7302C16.0898 12.7302 16.7227 12.1091 16.7227 11.0017L16.7227 5.52904C16.7227 4.41869 16.0898 3.80053 14.9736 3.80053L1.75195 3.80053C0.632812 3.80053 0 4.41576 0 5.52904L0 11.0017C0 12.1091 0.632812 12.7302 1.75195 12.7302ZM2.19727 11.321C1.78125 11.321 1.54688 11.0779 1.54688 10.6736L1.54688 5.85424C1.54688 5.43529 1.78125 5.20678 2.19727 5.20678L14.5254 5.20678C14.9414 5.20678 15.1758 5.45287 15.1758 5.85424L15.1758 10.6736C15.1758 11.0779 14.9385 11.321 14.5225 11.321Z" fill="var(--accent-color)"/>
+            <path d="M11.833 9.4724L13.3301 8.85717L19.207 2.98022C19.875 2.30639 19.8838 1.27807 19.2217 0.621818L19.0312 0.434318C18.4072-0.183846 17.3672-0.131112 16.7168 0.522209L10.8604 6.38158L10.2334 7.84643C9.80566 8.85131 10.8428 9.8767 11.833 9.4724Z" fill="Canvas"/>
+            <path d="M11.458 8.54369L12.7646 8.01342L17.6279 3.15307L16.5645 2.08959L11.7012 6.95287L11.1533 8.23608C11.0771 8.42944 11.2822 8.61401 11.458 8.54369ZM18.0996 2.67553L18.498 2.27709C18.7764 1.99291 18.7881 1.5974 18.5215 1.33959L18.3311 1.15209C18.0938 0.923576 17.6865 0.964591 17.4229 1.22826L17.0361 1.61205Z" fill-opacity="0.85"/>
+            <path d="M9.12012 9.19115C9.63281 9.19115 10.0518 8.77514 10.0518 8.26244C10.0518 7.74975 9.63281 7.33373 9.12012 7.33373C8.60742 7.33373 8.19141 7.74975 8.19141 8.26244C8.19141 8.77514 8.60742 9.19115 9.12012 9.19115Z" fill-opacity="0.85"/>
+            <path d="M6.45703 9.19115C6.96973 9.19115 7.38574 8.77514 7.38574 8.26244C7.38574 7.74975 6.96973 7.33373 6.45703 7.33373C5.94434 7.33373 5.52832 7.74975 5.52832 8.26244C5.52832 8.77514 5.94434 9.19115 6.45703 9.19115Z" fill-opacity="0.85"/>
+            <path d="M3.79395 9.19115C4.30664 9.19115 4.72266 8.77514 4.72266 8.26244C4.72266 7.74975 4.30664 7.33373 3.79395 7.33373C3.28125 7.33373 2.86523 7.74975 2.86523 8.26244C2.86523 8.77514 3.28125 9.19115 3.79395 9.19115Z" fill-opacity="0.85"/>
+        </svg>
+        <button id="playButton" class="large-button primary-button">Play</button>
+
+    </div>
+    <div id="game-screen" class="screen">
+        <div class="header">
+            <h1>SPELL IT!</h1>
+            <button class="icon-button" id="settingsButton">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11.5459 11.9824">
+                    <path d="M2.73926 11.9707L8.80664 11.9707C10.3447 11.9707 11.5459 10.8721 11.5459 9.32812C11.5459 7.78418 10.3447 6.68848 8.80664 6.68848L2.73926 6.68848C1.20117 6.68848 0 7.78418 0 9.32812C0 10.8721 1.20117 11.9707 2.73926 11.9707ZM8.95898 10.6523C8.21777 10.6436 7.6377 10.0576 7.6377 9.32227C7.6377 8.58691 8.2207 8.00098 8.95605 8.00098C9.69727 8.00098 10.2891 8.58398 10.2832 9.31055C10.2773 10.0576 9.68555 10.6582 8.95898 10.6523Z" fill-opacity="0.85"/>
+                    <path d="M2.97949 4.07227C3.63574 4.07812 4.16016 3.54785 4.16309 2.88574C4.16602 2.23242 3.63867 1.71387 2.97949 1.71387C2.32324 1.71387 1.80176 2.23828 1.80176 2.8916C1.80176 3.54785 2.32324 4.06934 2.97949 4.07227Z" fill-opacity="0.85"/>
+                    <path d="M2.97949 5.79199L8.56641 5.79199C10.2773 5.79199 11.5459 4.62891 11.5459 2.89746C11.5459 1.16309 10.2773 0 8.56641 0L2.97949 0C1.26855 0 0 1.16309 0 2.89746C0 4.62891 1.26855 5.79199 2.97949 5.79199ZM2.97949 4.44434C2.07422 4.44434 1.35059 3.80566 1.35059 2.89746C1.35059 1.98926 2.07422 1.35059 2.97949 1.35059L8.56641 1.35059C9.47168 1.35059 10.1953 1.98926 10.1953 2.89746C10.1953 3.80566 9.47168 4.44434 8.56641 4.44434Z" fill="var(--accent-color)"/>
+                </svg>
+            </button>
+        </div>
+        <div id="middle">
+            <input spellcheck="false" value="apeel pie" inputmode="none" id="gameInput">
+            <div id="hintsLegend" hidden>
+                <p>
+                    <span class="swatch" style="background-color: var(--blue);"></span>
+                    <span>Grammar error</span>
+                </p>
+                <p>
+                    <span class="swatch" style="background-color: var(--red);"></span>
+                    <span>Spelling error</span>
+                </p>
+            </div>
+            <div id="invalidResult" hidden>
+                <p>Incorrect! <span id="hintsTip" hidden>Try turning on hints if you are stuck!</span></p>
+            </div>
+        </div>
+        <div id="popperAnimation" hidden><img src="animation.gif"></div>
+        <div id="keyboard"></div>
+    </div>
+    <div id="settings-screen" class="screen">
+        <h1>Settings</h1>
+        <div class="row">
+            <input type="checkbox" switch id="toggleHintsCheckbox">
+            <label for="toggleHintsCheckbox">Toggle hints</label>
+        </div>
+        <div class="row">
+            <input type="checkbox" switch id="darkModeCheckbox">
+            <label for="darkModeCheckbox">Dark Mode</label>
+        </div>
+        <button class="large-button" onclick="showScreen('game-screen')">Back</button>
+    </div>
+    <div id="victory-screen" class="screen">
+        <div>
+            <p class="emoji">🎉</p>
+            <p>You won!</p>
+        </div>
+        <button class="primary-button large-button" onclick="startGame()">Replay?</button>
+    </div>
+    <script>
+        function showScreen(id) {
+            [...document.querySelectorAll(`.screen:not(#${id})`)].forEach(el => el.hidden = true);
+            document.getElementById(id).hidden = false;
+            invalidResult.hidden = true;
+        }
+
+        function toggleHints(enabled) {
+            hintsLegend.hidden = !enabled;
+            hintsTip.hidden = enabled;
+            gameInput.spellcheck = enabled;
+        }
+        
+        function toggleDarkMode(enabled) {
+            document.body.classList.toggle("dark", enabled);
+            darkModeCheckbox.checked = enabled;
+        }
+
+        toggleDarkMode(matchMedia("(prefers-color-scheme: dark)"));
+
+        showScreen("home-screen");
+
+        playButton.addEventListener("click", () => {
+            document.documentElement.requestFullscreen();
+            startGame();
+        });
+        settingsButton.addEventListener("click", () => {
+            showScreen("settings-screen");
+        });
+        toggleHintsCheckbox.addEventListener("change", function() {
+            toggleHints(this.checked);
+        });
+        darkModeCheckbox.addEventListener("change", function() {
+            toggleDarkMode(this.checked);
+        });
+        gameInput.addEventListener("input", () => {
+            invalidResult.hidden = true;
+        });
+
+        let inputs = [
+            "apeel pie",
+            "I thing so.",
+            "I ate a appeel pie."
+        ];
+
+        let results = [
+            "apple pie",
+            "I think so.",
+            "I ate an apple pie."
+        ];
+
+        let currentIndex = 0;
+        function startGame() {
+            showScreen("game-screen");
+            toggleHints(false);
+            currentIndex = 0;
+            gameInput.value = inputs[currentIndex];
+        }
+
+        function checkResult() {
+            if (gameInput.value.toLowerCase() == results[currentIndex].toLowerCase()) {
+                if (currentIndex == inputs.length - 1) {
+                    showScreen("victory-screen");
+                } else {
+                    currentIndex++;
+                    popperAnimation.hidden = false;
+                    gameInput.value = inputs[currentIndex];
+                    setTimeout(() => {
+                        popperAnimation.hidden = true;
+                    }, 1000)
+                }
+                
+                invalidResult.hidden = true;
+            } else {
+                invalidResult.hidden = false;
+            }
+        }
+
+        function createKeyboard() {
+            const keyboardLayout = [
+                ["q","w","e","r","t","y","u","i","o","p"],
+                ["a","s","d","f","g","h","j","k","l"],
+                ["z","x","c","v","b","n","m"],
+                ["check", "space", "⌫"],
+            ];
+            for (let row of keyboardLayout) {
+                const container = document.createElement("div");
+                container.className = "row";
+                for (let key of row) {
+                    const button = document.createElement("button");
+                    button.textContent = key;
+
+                    if (key == "check") {
+                        button.className = "primary-button";
+                    } else if (key == "space") {
+                        button.className = "space";
+                    } else if (key == "⌫") {
+                        button.className = "backspace";
+                    }
+
+                    button.addEventListener("mousedown", (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                    button.addEventListener("click", (e) => {
+                        switch (key) {
+                        case "check":
+                            checkResult();
+                            break;
+                        case "space":
+                            document.execCommand("insertText", false, " ");
+                            break;
+                        case "⌫":
+                            document.execCommand("delete");
+                            break;
+                        default:
+                            document.execCommand("insertText", false, key);
+                            break;
+                        }
+                    });
+                    container.append(button);
+                }
+                keyboard.append(container);
+            }
+        }
+        createKeyboard();
+    </script>
+</body>
+</html>
