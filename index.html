@@ -277,6 +277,7 @@
                 width: var(--width);
                 display: block;
                 margin: auto;
+                /* Optically center icon */
                 transform: translateX(calc(1.7 / 19.7132 * var(--width)));
             }
             #home-screen-icon > svg {
@@ -446,7 +447,9 @@
                 } else {
                     currentIndex++;
                     popperAnimation.hidden = false;
-                    gameInput.value = inputs[currentIndex];
+                    gameInput.value = "";
+                    gameInput.focus();
+                    document.execCommand("insertText", false, inputs[currentIndex]);
                     setTimeout(() => {
                         popperAnimation.hidden = true;
                     }, 1000)
