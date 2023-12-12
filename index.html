@@ -382,6 +382,8 @@
             [...document.querySelectorAll(`.screen:not(#${id})`)].forEach(el => el.hidden = true);
             document.getElementById(id).hidden = false;
             invalidResult.hidden = true;
+            if (id == "game-screen")
+                toggleHints(toggleHintsCheckbox.checked);
         }
 
         function toggleHints(enabled) {
@@ -404,9 +406,6 @@
         });
         settingsButton.addEventListener("click", () => {
             showScreen("settings-screen");
-        });
-        toggleHintsCheckbox.addEventListener("change", function() {
-            toggleHints(this.checked);
         });
         darkModeCheckbox.addEventListener("change", function() {
             toggleDarkMode(this.checked);
