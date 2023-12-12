@@ -431,7 +431,10 @@
             showScreen("game-screen");
             toggleHints(false);
             currentIndex = 0;
-            gameInput.value = inputs[currentIndex];
+            gameInput.value = "";
+            gameInput.focus();
+            document.execCommand("insertText", false, inputs[currentIndex]);
+            gameInput.blur();
         }
 
         function checkResult() {
