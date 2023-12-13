@@ -447,6 +447,8 @@
                     gameInput.value = "";
                     gameInput.focus();
                     document.execCommand("insertText", false, inputs[currentIndex]);
+                    document.execCommand("insertText", false, " ");
+                    document.execCommand("delete");
                     setTimeout(() => {
                         popperAnimation.hidden = true;
                     }, 1000)
